@@ -37,7 +37,7 @@ erro. A ferramenta `listar_chamados` continua funcionando (teste de regressão).
 
 ## Fase 3 — `atualizar_status`
 
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluída
 
 **Objetivo:** expor a ferramenta `atualizar_status`, que altera o status de um chamado e
 registra a mudança.
@@ -136,3 +136,46 @@ feitas durante o uso: depois de alguns testes manuais, os dados não serão mais
 originais. Como o banco não é versionado e é recriado quando ausente, a forma de voltar ao
 estado inicial é apagar o arquivo. Isso deve constar do README, para que quem for avaliar o
 trabalho consiga reproduzir o estado esperado.
+
+---
+
+## Replanejamento 3 (final) — após a Fase 3
+
+**Pergunta 1: as três fases estão concluídas conforme os critérios?**
+
+Sim. As três ferramentas estão implementadas, testadas e expostas pelo servidor, e os
+critérios de conclusão de cada fase foram verificados. As três fases foram marcadas como
+concluídas neste documento.
+
+**Pergunta 2: o modelo de dados se sustentou até o fim?**
+
+Sim, sem nenhuma alteração de esquema entre a primeira e a última fase. A decisão de criar
+`historico_status` já na Fase 1 — mesmo sabendo que ela só seria escrita na Fase 3 — evitou uma
+migração no meio do projeto. O teste de integração entre as fases confirma que a Fase 2 lê
+exatamente o que a Fase 3 escreve.
+
+**Pergunta 3: algo mudou na constituição durante a implementação?**
+
+Uma correção de precisão. Os carimbos de tempo passaram de segundos para microssegundos:
+com resolução de segundos, uma atualização feita no mesmo segundo do registro anterior não
+alterava `atualizado_em`, e o teste que verifica essa atualização falhava de forma
+intermitente. O campo existe para registrar *quando* algo mudou; duas alterações no mesmo
+segundo precisam ser distinguíveis.
+
+**Pergunta 4: o que ficou fora do escopo?**
+
+Registrado para não parecer esquecimento:
+
+- **Extensão opcional da Parte 2** (perguntas em linguagem livre com um modelo escolhendo a
+  ferramenta): não implementada. Os slides a apresentam como opcional, e ela exigiria um
+  modelo de linguagem — o protótipo obrigatório funciona apenas com comandos fixos.
+- **Busca parcial por nome de cliente**: deliberadamente fora do escopo da Fase 2, por exigir
+  regras de relevância que não são necessárias ao objetivo.
+- **Criação e exclusão de chamados**: fora do escopo desde a missão. As três ferramentas
+  cobrem consulta e atualização, que é o que a atividade pede.
+
+**Pergunta 5: o trabalho está pronto para a Parte 2?**
+
+Sim. O servidor expõe as três ferramentas, cada uma verificada pelo protocolo MCP e não apenas
+como função Python. A Parte 2 adiciona o app Streamlit em `app/`, consumindo este servidor por
+um client MCP via stdio.
