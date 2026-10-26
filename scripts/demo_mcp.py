@@ -40,7 +40,8 @@ async def main() -> int:
         ferramentas = await cliente.list_tools()
         nomes = [f.name for f in ferramentas]
         print(f"  {nomes}")
-        for esperada in ("listar_chamados", "buscar_historico_cliente"):
+        esperadas = ("listar_chamados", "buscar_historico_cliente", "atualizar_status")
+        for esperada in esperadas:
             if esperada not in nomes:
                 falhas.append(f"{esperada} não está exposta")
 
@@ -113,6 +114,80 @@ async def main() -> int:
         print(f"  fechados = {r.get('total')}")
         if "total" not in r:
             falhas.append("listar_chamados não respondeu (regressão)")
+
+        # ------------------------------------------------------------------
+        # Fase 3 — escrita: atualizar_status
+        # ------------------------------------------------------------------
+
+        # 10. Erros primeiro, sem tocar nos dados: status inválido e id inexistente.
+        titulo("10. atualizar_status — entradas inválidas")
+        r = (await cliente.call_tool(
+            "atualizar_status", {"chamado_id": 1, "novo_status": "encerrado"}
+        )).data
+        print(f"  status inválido  -> erro: {r.get('erro')}")
+        if "erro" not in r:
+            falhas.append("status inválido não retornou erro")
+
+        r = (await cliente.call_tool(
+            "atualizar_status", {"chamado_id": 999999, "novo_status": "fechado"}
+        )).data
+        print(f"  chamado inexistente -> erro: {r.get('erro')}")
+        if "erro" not in r:
+            falhas.append("chamado inexistente não retornou erro")
+
+        # 11. Mudança real, em um chamado aberto, com histórico limpo.
+        titulo("11. atualizar_status — mudança de status")
+        abertos = (await cliente.call_tool(
+            "listar_chamados", {"status": "aberto"}
+        )).data["chamados"]
+        if abertos:
+            alvo = abertos[0]["id"]
+            r = (await cliente.call_tool(
+                "atualizar_status", {"chamado_id": alvo, "novo_status": "em_andamento"}
+            )).data
+            print(f"  #{alvo}: {r.get('status_anterior')} -> {r.get('status_novo')}")
+            print(f"  mensagem: {r.get('mensagem')}")
+            if not r.get("atualizado"):
+                falhas.append("mudança de status não foi aplicada")
+
+            # 12. Persistiu? Reconsulta pelo protocolo.
+            titulo("12. Persistência — o status mudou mesmo?")
+            chamado = (await cliente.call_tool(
+                "buscar_historico_cliente", {"cliente": abertos[0]["cliente"]}
+            )).data
+            atual = next(c for c in chamado["chamados"] if c["id"] == alvo)
+            print(f"  status atual = {atual['status']}  histórico = {len(atual['historico'])} evento(s)")
+            if atual["status"] != "em_andamento":
+                falhas.append("a mudança não persistiu no banco")
+            if len(atual["historico"]) != 1:
+                falhas.append("a mudança não foi registrada no histórico")
+
+            # 13. Mesmo status de novo: nada deve mudar.
+            titulo("13. atualizar_status — repetir o mesmo status")
+            r = (await cliente.call_tool(
+                "atualizar_status", {"chamado_id": alvo, "novo_status": "em_andamento"}
+            )).data
+            print(f"  atualizado = {r.get('atualizado')}  msg: {r.get('mensagem')}")
+            if r.get("atualizado") is not False:
+                falhas.append("repetir o mesmo status deveria registrar atualizado=false")
+
+            # 14. O histórico acumula ao longo de mudanças sucessivas.
+            titulo("14. Histórico acumula em mudanças sucessivas")
+            for novo in ("fechado", "aberto"):
+                await cliente.call_tool(
+                    "atualizar_status", {"chamado_id": alvo, "novo_status": novo}
+                )
+            chamado = (await cliente.call_tool(
+                "buscar_historico_cliente", {"cliente": abertos[0]["cliente"]}
+            )).data
+            atual = next(c for c in chamado["chamados"] if c["id"] == alvo)
+            print(f"  histórico = {len(atual['historico'])} eventos (esperado: 3)")
+            for h in atual["historico"]:
+                print(f"    {h['status_anterior']} -> {h['status_novo']}")
+            if len(atual["historico"]) != 3:
+                falhas.append("o histórico não acumulou as mudanças")
+        else:
+            falhas.append("não há chamados abertos para atualizar")
 
     titulo("Resultado")
     if falhas:

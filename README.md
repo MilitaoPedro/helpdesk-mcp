@@ -132,3 +132,25 @@ campo `historico`. Cliente sem chamados retorna `total = 0`; nome vazio retorna 
 ```python
 buscar_historico_cliente("Ana Souza")   # chamados da Ana + histórico de cada um
 ```
+
+### `atualizar_status`
+
+Altera o status de um chamado e registra a mudança no histórico. É a **única** ferramenta que
+modifica dados.
+
+| Parâmetro | Tipo | Descrição |
+| --- | --- | --- |
+| `chamado_id` | inteiro | Identificador do chamado |
+| `novo_status` | texto | `aberto`, `em_andamento` ou `fechado` |
+
+Retorna `atualizado`, `chamado_id`, `status_anterior`, `status_novo` e `mensagem`. Se o
+chamado já estava no status informado, retorna `atualizado = false` sem registrar nada.
+Status inválido ou chamado inexistente retornam `erro`, sem alterar o banco.
+
+```python
+atualizar_status(1, "em_andamento")     # atualiza e registra no histórico
+atualizar_status(1, "em_andamento")     # já estava: atualizado = false
+```
+
+Cada mudança efetiva é registrada em `historico_status` e **nada é sobrescrito**: o histórico
+de um chamado acumula ao longo do tempo.
