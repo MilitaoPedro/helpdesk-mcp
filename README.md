@@ -66,6 +66,14 @@ O servidor usa o transporte `stdio` e é iniciado pelo cliente MCP — normalmen
 executa à mão. O banco `helpdesk.db` é criado e populado com dados fictícios na primeira
 execução.
 
+O banco guarda as alterações feitas durante o uso: depois de atualizar status, ele deixa de
+estar no estado inicial. Para voltar aos dados fictícios originais, apague o arquivo — ele é
+recriado na próxima execução:
+
+```bash
+rm -f helpdesk.db
+```
+
 ### Registro em um cliente MCP
 
 O arquivo [`.mcp.json`](.mcp.json) na raiz registra o servidor. Ajuste o caminho absoluto do

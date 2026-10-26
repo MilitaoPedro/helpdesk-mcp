@@ -24,7 +24,7 @@ retorna uma lista vazia, sem erro.
 
 ## Fase 2 — `buscar_historico_cliente`
 
-**Status:** ⬜ Pendente
+**Status:** ✅ Concluída
 
 **Objetivo:** expor a ferramenta `buscar_historico_cliente`, que retorna os chamados de um
 cliente e o histórico de mudanças de status desses chamados.
@@ -94,3 +94,45 @@ Nada a remover. Esclarece-se um ponto para a Fase 3: `atualizar_status` deve rej
 mudança para um status **igual ao atual** ou registrá-la? Decisão: registrar apenas quando o
 status realmente muda, evitando poluir o histórico com eventos sem efeito. A regra fica
 detalhada na especificação da Fase 3.
+
+---
+
+## Replanejamento 2 — após a Fase 2
+
+**Pergunta 1: o conjunto de status continua consistente?**
+
+Sim. Os três status (`aberto`, `em_andamento`, `fechado`) definidos na constituição foram
+suficientes para as duas fases implementadas, e nenhuma necessidade de um quarto valor
+apareceu. A definição única em `STATUS_VALIDOS` é usada pelas três ferramentas e pelo resumo
+por status, que sempre traz as três chaves — inclusive zeradas — para que o formato da
+resposta não mude conforme os dados.
+
+**Pergunta 2: o que `atualizar_status` deve fazer com um chamado inexistente?**
+
+Rejeitar, com erro explícito, sem alterar o banco. É o mesmo tratamento dado ao status
+inválido na Fase 1: erro de entrada vira resultado com `erro`, e não exceção. Como o banco
+tem chave estrangeira de `historico_status` para `chamados`, registrar histórico de um
+chamado inexistente seria inconsistente de qualquer forma.
+
+**Pergunta 3: as atualizações preservam o histórico?**
+
+Sim — e este é o ponto central da arquitetura definida na constituição. A tabela `chamados`
+guarda apenas o status **atual**, e cada mudança é registrada em `historico_status`. Assim,
+atualizar o status nunca sobrescreve o passado. A Fase 2 já lê essa tabela; a Fase 3 passa a
+escrevê-la. Confirmado que o modelo suporta as duas operações sem alteração de esquema.
+
+**Pergunta 4: roadmap e especificações refletem o código atual?**
+
+Com uma correção. O critério de conclusão da Fase 2 no roadmap dizia apenas que a ferramenta
+deveria "retornar os chamados do cliente e as mudanças de status". A implementação foi além
+do texto: passou a devolver também um resumo com contagem por status (R6), decidido durante a
+especificação. O código está correto e testado; o critério no roadmap é que estava incompleto.
+Registrado aqui para que o roadmap não descreva um projeto menor do que o construído.
+
+**Pergunta 5: algo a esclarecer para a Fase 3?**
+
+Um detalhe de implementação. O banco de desenvolvimento (`helpdesk.db`) acumula as alterações
+feitas durante o uso: depois de alguns testes manuais, os dados não serão mais os fictícios
+originais. Como o banco não é versionado e é recriado quando ausente, a forma de voltar ao
+estado inicial é apagar o arquivo. Isso deve constar do README, para que quem for avaliar o
+trabalho consiga reproduzir o estado esperado.
