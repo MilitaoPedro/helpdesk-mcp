@@ -1,0 +1,15 @@
+# Dependências do helpdesk-mcp
+#
+# Instalação:
+#   python -m venv .venv
+#   source .venv/bin/activate      # Windows: .venv\Scripts\activate
+#   pip install -r requirements.txt
+
+# Servidor MCP (FastMCP) — inclui o client stdio usado pelo app
+fastmcp==4.1.3
+
+# Protótipo de interface (Parte 2)
+streamlit==1.66.1
+
+# Testes automatizados
+pytest==9.1.1
