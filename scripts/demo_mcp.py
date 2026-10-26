@@ -40,8 +40,9 @@ async def main() -> int:
         ferramentas = await cliente.list_tools()
         nomes = [f.name for f in ferramentas]
         print(f"  {nomes}")
-        if "listar_chamados" not in nomes:
-            falhas.append("listar_chamados não está exposta")
+        for esperada in ("listar_chamados", "buscar_historico_cliente"):
+            if esperada not in nomes:
+                falhas.append(f"{esperada} não está exposta")
 
         # 2. Sem filtro.
         titulo("2. listar_chamados() — sem filtro")
@@ -76,6 +77,42 @@ async def main() -> int:
         print(f"  total = {r.get('total')}")
         if "total" not in r:
             falhas.append("servidor não respondeu após status inválido")
+
+        # 6. Cliente com vários chamados, com histórico.
+        titulo("6. buscar_historico_cliente('Ana Souza')")
+        r = (await cliente.call_tool(
+            "buscar_historico_cliente", {"cliente": "Ana Souza"}
+        )).data
+        print(f"  total = {r.get('total')}  resumo = {r.get('resumo', {}).get('por_status')}")
+        for c in r.get("chamados", []):
+            print(f"    #{c['id']} {c['status']:<13} histórico: {len(c['historico'])} evento(s)")
+        if r.get("total", 0) == 0:
+            falhas.append("cliente com chamados retornou vazio")
+        if any("historico" not in c for c in r.get("chamados", [])):
+            falhas.append("chamado sem o campo historico")
+
+        # 7. Cliente inexistente: vazio, e não erro.
+        titulo("7. buscar_historico_cliente('Cliente Inexistente')")
+        r = (await cliente.call_tool(
+            "buscar_historico_cliente", {"cliente": "Cliente Inexistente"}
+        )).data
+        print(f"  total = {r.get('total')}  erro = {r.get('erro')}")
+        if r.get("total") != 0 or "erro" in r:
+            falhas.append("cliente inexistente deveria retornar vazio sem erro")
+
+        # 8. Nome vazio: erro.
+        titulo("8. buscar_historico_cliente('') — nome vazio")
+        r = (await cliente.call_tool("buscar_historico_cliente", {"cliente": ""})).data
+        print(f"  erro = {r.get('erro')}")
+        if "erro" not in r:
+            falhas.append("nome vazio não retornou erro")
+
+        # 9. Regressão: a Fase 1 continua funcionando via protocolo.
+        titulo("9. Regressão — listar_chamados continua respondendo")
+        r = (await cliente.call_tool("listar_chamados", {"status": "fechado"})).data
+        print(f"  fechados = {r.get('total')}")
+        if "total" not in r:
+            falhas.append("listar_chamados não respondeu (regressão)")
 
     titulo("Resultado")
     if falhas:

@@ -47,6 +47,48 @@ def listar_chamados(status: str | None = None) -> dict:
     }
 
 
+@mcp.tool()
+def buscar_historico_cliente(cliente: str) -> dict:
+    """Retorna os chamados de um cliente e o histórico de status de cada um.
+
+    Use esta ferramenta quando a pergunta for sobre um cliente específico
+    ("quantos chamados abertos o cliente X tem?", "qual o histórico do cliente
+    X?"). Para listar chamados por status, sem filtrar por cliente, use
+    `listar_chamados`.
+
+    Args:
+        cliente: Nome do cliente. A busca ignora maiúsculas/minúsculas e
+            espaços nas pontas, mas não encontra nomes parciais.
+
+    Returns:
+        Um objeto com "cliente", "total", "resumo" (contagem por status) e
+        "chamados" — cada chamado incluindo seu campo "historico". Cliente sem
+        chamados retorna "total" igual a zero, sem erro. Nome vazio retorna
+        "erro".
+    """
+    if not cliente or not cliente.strip():
+        # Mesmo padrão da Fase 1: erro de entrada é resultado, não exceção.
+        return {"erro": "O nome do cliente não pode ser vazio."}
+
+    chamados = banco.listar_por_cliente(cliente)
+
+    # Anexa o histórico de cada chamado (R2).
+    for chamado in chamados:
+        chamado["historico"] = banco.historico_do_chamado(chamado["id"])
+
+    # O resumo deriva da mesma lista retornada, para não divergir dela (R6).
+    por_status = {status: 0 for status in banco.STATUS_VALIDOS}
+    for chamado in chamados:
+        por_status[chamado["status"]] = por_status.get(chamado["status"], 0) + 1
+
+    return {
+        "cliente": cliente.strip(),
+        "total": len(chamados),
+        "resumo": {"por_status": por_status},
+        "chamados": chamados,
+    }
+
+
 if __name__ == "__main__":
     # Garante que o banco existe e está populado antes de aceitar chamadas.
     banco.inicializar().close()
