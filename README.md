@@ -108,3 +108,19 @@ Retorna `total` e `chamados` (do mais recente para o mais antigo). Status invál
 listar_chamados()                      # todos os chamados
 listar_chamados(status="aberto")       # apenas os abertos
 ```
+
+### `buscar_historico_cliente`
+
+Retorna os chamados de um cliente e o histórico de mudanças de status de cada um.
+
+| Parâmetro | Tipo | Descrição |
+| --- | --- | --- |
+| `cliente` | texto | Nome do cliente (obrigatório) |
+
+A busca ignora maiúsculas/minúsculas e espaços nas pontas, mas não encontra nomes parciais.
+Retorna `cliente`, `total`, `resumo` (contagem por status) e `chamados` — cada chamado com seu
+campo `historico`. Cliente sem chamados retorna `total = 0`; nome vazio retorna `erro`.
+
+```python
+buscar_historico_cliente("Ana Souza")   # chamados da Ana + histórico de cada um
+```

@@ -118,6 +118,49 @@ def inicializar(caminho: Path | str | None = None) -> sqlite3.Connection:
     return conexao
 
 
+def listar_por_cliente(cliente: str, caminho: Path | str | None = None) -> list[dict]:
+    """Retorna os chamados de um cliente, do mais recente para o mais antigo.
+
+    A correspondência é exata, ignorando maiúsculas/minúsculas e espaços nas
+    pontas. Cliente sem chamados devolve lista vazia, não erro.
+    """
+    conexao = inicializar(caminho)
+    try:
+        # COLLATE NOCASE cobre maiúsculas/minúsculas; TRIM(?) cobre os espaços
+        # nas pontas do termo buscado.
+        linhas = conexao.execute(
+            """
+            SELECT * FROM chamados
+            WHERE cliente = TRIM(?) COLLATE NOCASE
+            ORDER BY criado_em DESC, id DESC
+            """,
+            (cliente,),
+        ).fetchall()
+        return [dict(linha) for linha in linhas]
+    finally:
+        conexao.close()
+
+
+def historico_do_chamado(
+    chamado_id: int, caminho: Path | str | None = None
+) -> list[dict]:
+    """Retorna as mudanças de status de um chamado, em ordem cronológica."""
+    conexao = inicializar(caminho)
+    try:
+        linhas = conexao.execute(
+            """
+            SELECT status_anterior, status_novo, alterado_em
+            FROM historico_status
+            WHERE chamado_id = ?
+            ORDER BY alterado_em ASC, id ASC
+            """,
+            (chamado_id,),
+        ).fetchall()
+        return [dict(linha) for linha in linhas]
+    finally:
+        conexao.close()
+
+
 def listar(status: str | None = None, caminho: Path | str | None = None) -> list[dict]:
     """Retorna os chamados, do mais recente para o mais antigo.
 
