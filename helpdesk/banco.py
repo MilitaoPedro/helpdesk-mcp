@@ -19,8 +19,13 @@ STATUS_VALIDOS = ("aberto", "em_andamento", "fechado")
 
 
 def _agora() -> str:
-    """Data/hora atual em ISO 8601 (UTC), usada em criado_em/atualizado_em."""
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    """Data/hora atual em ISO 8601 (UTC), usada em criado_em/atualizado_em.
+
+    Com precisão de microssegundos: estes campos registram *quando* algo mudou,
+    e com resolução de segundos duas alterações no mesmo segundo ficariam
+    indistinguíveis.
+    """
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
 
 def _resolver(caminho: Path | str | None) -> Path | str:
@@ -157,6 +162,83 @@ def historico_do_chamado(
             (chamado_id,),
         ).fetchall()
         return [dict(linha) for linha in linhas]
+    finally:
+        conexao.close()
+
+
+def buscar_chamado(chamado_id: int, caminho: Path | str | None = None) -> dict | None:
+    """Retorna um chamado pelo id, ou None se não existir."""
+    conexao = inicializar(caminho)
+    try:
+        linha = conexao.execute(
+            "SELECT * FROM chamados WHERE id = ?", (chamado_id,)
+        ).fetchone()
+        return dict(linha) if linha else None
+    finally:
+        conexao.close()
+
+
+def atualizar_status(
+    chamado_id: int, novo_status: str, caminho: Path | str | None = None
+) -> dict:
+    """Altera o status de um chamado e registra a mudança no histórico.
+
+    A alteração e o registro do histórico acontecem na mesma transação: ou os
+    dois são gravados, ou nenhum é. Devolve um dicionário descrevendo o que
+    aconteceu — "mudou", "não havia o que mudar" ou "não encontrado" — para que
+    a ferramenta monte a resposta sem reabrir o banco.
+
+    Não valida o novo status: essa checagem é da ferramenta, que devolve a
+    mensagem com os valores aceitos. Aqui a responsabilidade é a escrita
+    consistente.
+    """
+    conexao = inicializar(caminho)
+    try:
+        with conexao:  # transação: commit no fim, rollback em caso de erro
+            linha = conexao.execute(
+                "SELECT status FROM chamados WHERE id = ?", (chamado_id,)
+            ).fetchone()
+
+            if linha is None:
+                return {"resultado": "nao_encontrado", "chamado_id": chamado_id}
+
+            status_anterior = linha["status"]
+
+            if status_anterior == novo_status:
+                # Nada a fazer: registrar aqui poluiria o histórico com um
+                # evento sem efeito e mexeria no carimbo de tempo à toa.
+                return {
+                    "resultado": "sem_mudanca",
+                    "chamado_id": chamado_id,
+                    "status_anterior": status_anterior,
+                    "status_novo": novo_status,
+                }
+
+            agora = _agora()
+            conexao.execute(
+                """
+                UPDATE chamados
+                   SET status = ?, atualizado_em = ?
+                 WHERE id = ?
+                """,
+                (novo_status, agora, chamado_id),
+            )
+            conexao.execute(
+                """
+                INSERT INTO historico_status
+                    (chamado_id, status_anterior, status_novo, alterado_em)
+                VALUES (?, ?, ?, ?)
+                """,
+                (chamado_id, status_anterior, novo_status, agora),
+            )
+
+            return {
+                "resultado": "atualizado",
+                "chamado_id": chamado_id,
+                "status_anterior": status_anterior,
+                "status_novo": novo_status,
+                "alterado_em": agora,
+            }
     finally:
         conexao.close()
 

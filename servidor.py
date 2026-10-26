@@ -89,6 +89,59 @@ def buscar_historico_cliente(cliente: str) -> dict:
     }
 
 
+@mcp.tool()
+def atualizar_status(chamado_id: int, novo_status: str) -> dict:
+    """Altera o status de um chamado e registra a mudança no histórico.
+
+    Atenção: esta é a única ferramenta que ALTERA dados. As demais apenas
+    consultam.
+
+    Args:
+        chamado_id: Identificador do chamado a alterar.
+        novo_status: O novo status. Valores aceitos: "aberto", "em_andamento"
+            ou "fechado".
+
+    Returns:
+        Em caso de mudança: "atualizado" (true), o chamado, o status anterior e
+        o novo. Se o chamado já estava nesse status, retorna "atualizado" igual
+        a false, sem registrar nada. Status inválido ou chamado inexistente
+        retornam "erro".
+    """
+    if novo_status not in banco.STATUS_VALIDOS:
+        return {
+            "erro": f"Status inválido: {novo_status!r}.",
+            "status_validos": list(banco.STATUS_VALIDOS),
+        }
+
+    resultado = banco.atualizar_status(chamado_id, novo_status)
+
+    if resultado["resultado"] == "nao_encontrado":
+        return {"erro": f"Chamado {chamado_id} não encontrado."}
+
+    if resultado["resultado"] == "sem_mudanca":
+        return {
+            "atualizado": False,
+            "chamado_id": chamado_id,
+            "status_anterior": resultado["status_anterior"],
+            "status_novo": resultado["status_novo"],
+            "mensagem": (
+                f"O chamado {chamado_id} já estava com o status "
+                f"{novo_status!r}; nada foi alterado."
+            ),
+        }
+
+    return {
+        "atualizado": True,
+        "chamado_id": chamado_id,
+        "status_anterior": resultado["status_anterior"],
+        "status_novo": resultado["status_novo"],
+        "mensagem": (
+            f"Chamado {chamado_id}: status alterado de "
+            f"{resultado['status_anterior']!r} para {novo_status!r}."
+        ),
+    }
+
+
 if __name__ == "__main__":
     # Garante que o banco existe e está populado antes de aceitar chamadas.
     banco.inicializar().close()
