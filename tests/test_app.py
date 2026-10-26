@@ -18,11 +18,32 @@ import mcp_client  # noqa: E402
 
 # --- localização do servidor -------------------------------------------------
 
-def test_localiza_servidor_no_repositorio():
-    """No arranjo do repositório, o servidor está na raiz do projeto."""
-    assert mcp_client._localizar_servidor() == (
-        Path(mcp_client.PROJETO) / "servidor.py"
-    )
+def test_localiza_servidor_no_arranjo_atual():
+    """Encontra o servidor em qualquer um dos dois arranjos.
+
+    Este teste roda tanto no repositório (servidor na raiz do projeto) quanto
+    no pacote de entrega (servidor na pasta irmã), então não pode fixar um
+    caminho: verifica que o servidor achado é um dos candidatos e que o
+    arquivo existe de fato.
+    """
+    servidor = mcp_client._localizar_servidor()
+
+    assert servidor.is_file()
+    assert servidor.name == "servidor.py"
+    assert servidor in mcp_client._candidatos()
+
+
+def test_candidatos_incluem_os_dois_arranjos(monkeypatch):
+    """Os dois arranjos conhecidos estão entre os candidatos."""
+    monkeypatch.setenv(mcp_client.VARIAVEL_AMBIENTE, "/tmp/inexistente/servidor.py")
+    candidatos = mcp_client._candidatos()
+
+    # Arranjo do repositório: servidor na raiz do projeto.
+    assert mcp_client.PROJETO / "servidor.py" in candidatos
+
+    # Arranjo da entrega: servidor na pasta irmã.
+    esperado = mcp_client.PROJETO.parent / mcp_client.NOME_PASTA_SERVIDOR / "servidor.py"
+    assert esperado in candidatos
 
 
 def test_variavel_de_ambiente_tem_preferencia(monkeypatch, tmp_path):
