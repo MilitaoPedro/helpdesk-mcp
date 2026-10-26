@@ -154,3 +154,42 @@ atualizar_status(1, "em_andamento")     # já estava: atualizado = false
 
 Cada mudança efetiva é registrada em `historico_status` e **nada é sobrescrito**: o histórico
 de um chamado acumula ao longo do tempo.
+
+## Interface de atendimento (Streamlit)
+
+O diretório [`app/`](app/) contém um protótipo de interface de chat para o atendente.
+
+```bash
+.venv/bin/python -m streamlit run app/app.py
+```
+
+A interface abre em `http://localhost:8501`. Exemplos de comandos:
+
+```
+listar abertos
+listar em andamento
+histórico do cliente Ana Souza
+alterar chamado 3 para fechado
+ajuda
+```
+
+### Como funciona
+
+```
+atendente → app Streamlit → client MCP (stdio) → servidor MCP → SQLite
+```
+
+O app é um **cliente MCP**: ele não abre o banco de dados. Toda consulta e alteração passa
+pelo servidor, pelo protocolo MCP — é isso que o protótipo demonstra.
+
+**Não há modelo de linguagem aqui.** O texto digitado é casado contra um conjunto fixo de
+padrões (`app/comandos.py`) e convertido em chamadas de ferramenta. É uma interface de chat
+que opera MCP, e não um agente conversacional — o comportamento é previsível e testável. A
+extensão opcional dos slides (perguntas em linguagem livre, com um modelo escolhendo a
+ferramenta) não foi implementada.
+
+Para exercitar a mesma lógica sem abrir o navegador:
+
+```bash
+.venv/bin/python scripts/demo_app.py
+```
