@@ -36,4 +36,75 @@ O servidor expõe três ferramentas sobre um banco SQLite local com dados fictí
 - [`specs/pilha-tecnologia.md`](specs/pilha-tecnologia.md) — decisões técnicas e restrições
 - [`specs/roadmap.md`](specs/roadmap.md) — fases de implementação
 
-Instruções de instalação e execução são adicionadas ao final da implementação.
+## Instalação
+
+Requer Python 3.10 ou superior.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Execução
+
+### Testes
+
+```bash
+.venv/bin/python -m pytest tests/ -v
+```
+
+Os testes usam um banco temporário próprio e não afetam o `helpdesk.db` de desenvolvimento.
+
+### Servidor MCP
+
+```bash
+.venv/bin/python servidor.py
+```
+
+O servidor usa o transporte `stdio` e é iniciado pelo cliente MCP — normalmente você não o
+executa à mão. O banco `helpdesk.db` é criado e populado com dados fictícios na primeira
+execução.
+
+### Registro em um cliente MCP
+
+O arquivo [`.mcp.json`](.mcp.json) na raiz registra o servidor. Ajuste o caminho absoluto do
+comando para o Python **do ambiente virtual** deste projeto:
+
+```json
+{
+  "mcpServers": {
+    "helpdesk": {
+      "type": "stdio",
+      "command": "/caminho/para/helpdesk-mcp/.venv/bin/python",
+      "args": ["/caminho/para/helpdesk-mcp/servidor.py"]
+    }
+  }
+}
+```
+
+### Verificação ponta a ponta
+
+Chama o servidor pelo protocolo MCP, como um cliente real:
+
+```bash
+.venv/bin/python scripts/demo_mcp.py
+```
+
+## Ferramentas
+
+### `listar_chamados`
+
+Lista os chamados, com filtro opcional por status.
+
+| Parâmetro | Tipo | Descrição |
+| --- | --- | --- |
+| `status` | texto, opcional | `aberto`, `em_andamento` ou `fechado` |
+
+Retorna `total` e `chamados` (do mais recente para o mais antigo). Status inválido retorna
+`erro` e `status_validos`. Exemplos:
+
+```python
+listar_chamados()                      # todos os chamados
+listar_chamados(status="aberto")       # apenas os abertos
+```
