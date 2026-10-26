@@ -13,6 +13,37 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app"))
 
 import comandos as cmds  # noqa: E402
+import mcp_client  # noqa: E402
+
+
+# --- localização do servidor -------------------------------------------------
+
+def test_localiza_servidor_no_repositorio():
+    """No arranjo do repositório, o servidor está na raiz do projeto."""
+    assert mcp_client._localizar_servidor() == (
+        Path(mcp_client.PROJETO) / "servidor.py"
+    )
+
+
+def test_variavel_de_ambiente_tem_preferencia(monkeypatch, tmp_path):
+    """HELPDESK_SERVIDOR permite apontar o servidor para outro lugar."""
+    falso = tmp_path / "servidor.py"
+    falso.write_text("# servidor de mentira\n")
+    monkeypatch.setenv(mcp_client.VARIAVEL_AMBIENTE, str(falso))
+
+    assert mcp_client._localizar_servidor() == falso
+
+
+def test_erro_quando_servidor_nao_existe(monkeypatch, tmp_path):
+    """Sem nenhum candidato válido, o erro explica onde se procurou."""
+    monkeypatch.setenv(mcp_client.VARIAVEL_AMBIENTE, str(tmp_path / "nao-existe.py"))
+    monkeypatch.setattr(mcp_client, "PROJETO", tmp_path)
+
+    with pytest.raises(mcp_client.ErroMCP) as erro:
+        mcp_client._localizar_servidor()
+
+    assert "não encontrado" in str(erro.value)
+    assert mcp_client.VARIAVEL_AMBIENTE in str(erro.value)
 
 
 # --- interpretação: listar ---------------------------------------------------
