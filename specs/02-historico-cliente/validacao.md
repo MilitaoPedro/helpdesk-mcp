@@ -13,8 +13,7 @@
 | `test_ordenado_do_mais_recente` | R1 | Ordem consistente com `listar_chamados` |
 | `test_historico_presente_em_cada_chamado` | R2 | Cada chamado traz a chave `historico` |
 | `test_historico_com_mudanca_registrada` | R2 | Mudança inserida à mão aparece no resultado |
-| `test_cliente_sem_chamados` | R3 | Cliente existente sem chamados → vazio, sem erro |
-| `test_cliente_inexistente` | R3 | Cliente que não existe → vazio, sem erro |
+| `test_cliente_sem_chamados` | R3 | Cliente sem chamados ou inexistente → vazio, sem erro |
 | `test_nome_com_maiusculas_diferentes` | R5 | Busca insensível a maiúsculas/minúsculas |
 | `test_nome_com_espacos_nas_pontas` | R5 | Espaços nas pontas são ignorados |
 | `test_nome_vazio` | R4 | Nome vazio ou só espaços → erro |

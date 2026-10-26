@@ -76,8 +76,14 @@ rm -f helpdesk.db
 
 ### Registro em um cliente MCP
 
-O arquivo [`.mcp.json`](.mcp.json) na raiz registra o servidor. Ajuste o caminho absoluto do
-comando para o Python **do ambiente virtual** deste projeto:
+O repositório traz duas configurações de registro:
+
+- [`.vscode/mcp.json`](.vscode/mcp.json) — lido pelo VS Code, que ativa o servidor
+  automaticamente ao abrir o projeto;
+- [`.mcp.json`](.mcp.json) — formato usado por outros clientes MCP.
+
+Ambas apontam para o Python **do ambiente virtual** deste projeto. Se o seu cliente não
+entender `${workspaceFolder}`, troque pelo caminho absoluto:
 
 ```json
 {
@@ -154,6 +160,77 @@ atualizar_status(1, "em_andamento")     # já estava: atualizado = false
 
 Cada mudança efetiva é registrada em `historico_status` e **nada é sobrescrito**: o histórico
 de um chamado acumula ao longo do tempo.
+
+## Exemplos de execução
+
+Saídas reais das ferramentas, sobre os dados fictícios do banco recém-criado
+(`rm -f helpdesk.db` antes, para partir do estado inicial).
+
+### `listar_chamados(status="aberto")`
+
+```json
+{
+  "total": 2,
+  "chamados": [
+    {
+      "id": 1,
+      "cliente": "Ana Souza",
+      "descricao": "Notebook não liga após queda de energia",
+      "status": "aberto",
+      "criado_em": "2026-10-26T01:59:24+00:00",
+      "atualizado_em": "2026-10-26T01:59:24+00:00"
+    },
+    {
+      "id": 3,
+      "cliente": "Bruno Lima",
+      "descricao": "Solicitação de acesso ao sistema de folha",
+      "status": "aberto",
+      "criado_em": "2026-10-25T01:59:24+00:00",
+      "atualizado_em": "2026-10-25T01:59:24+00:00"
+    }
+  ]
+}
+```
+
+### `buscar_historico_cliente("Ana Souza")`
+
+Depois de o chamado 1 ter passado por `aberto` → `em_andamento` → `fechado`. O histórico
+acumula os dois eventos:
+
+```json
+{
+  "id": 1,
+  "cliente": "Ana Souza",
+  "descricao": "Notebook não liga após queda de energia",
+  "status": "fechado",
+  "historico": [
+    {
+      "status_anterior": "aberto",
+      "status_novo": "em_andamento",
+      "alterado_em": "2026-10-26T02:00:28.810692+00:00"
+    },
+    {
+      "status_anterior": "em_andamento",
+      "status_novo": "fechado",
+      "alterado_em": "2026-10-26T02:00:28.812264+00:00"
+    }
+  ]
+}
+```
+
+### `atualizar_status(1, "fechado")`
+
+```json
+{
+  "atualizado": true,
+  "chamado_id": 1,
+  "status_anterior": "em_andamento",
+  "status_novo": "fechado",
+  "mensagem": "Chamado 1: status alterado de 'em_andamento' para 'fechado'."
+}
+```
+
+Repetir a mesma chamada devolve `"atualizado": false`, sem registrar nada novo.
 
 ## Interface de atendimento (Streamlit)
 

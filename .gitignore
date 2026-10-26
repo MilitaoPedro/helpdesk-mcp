@@ -19,5 +19,7 @@ __pycache__/
 
 # Sistema operacional / editores
 .DS_Store
-.vscode/
 .idea/
+
+# .vscode/ NÃO é ignorado de propósito: .vscode/mcp.json registra o servidor
+# MCP e faz parte das instruções de execução documentadas no README.
